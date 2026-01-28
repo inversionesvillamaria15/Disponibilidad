@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Villa María - Disponibilidad en Tiempo Real</title>
+    <style>
+        body { margin: 0; padding: 0; background: #f1f5f9; display: flex; justify-content: center; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        #map-wrapper { position: relative; width: 100%; max-width: 1400px; line-height: 0; margin-top: 10px; }
+        #plano-img { width: 100%; height: auto; display: block; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+
+        /* Puntos Responsivos */
+        .lote-marker {
+            position: absolute; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #fff;
+            transform: translate(-50%, -50%); display: flex; justify-content: center; align-items: center;
+            color: white; font-size: 7.5px; font-weight: bold; box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        }
+        
+        @media screen and (max-width: 600px) {
+            .lote-marker { width: 12px; height: 12px; font-size: 5.5px; }
+        }
+
+        .vendido { background-color: #ef4444 !important; }
+        .reserva { background-color: #f59e0b !important; }
+        .disponible { background-color: #10b981 !important; }
+
+        /* Popup para el Cliente */
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; z-index: 998; backdrop-filter: blur(4px); }
+        .client-box {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 25px; border-radius: 25px;
+            display: none; width: 85%; max-width: 300px; text-align: center; z-index: 1000;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        #c-precio { color: #2563eb; font-size: 24px; font-weight: bold; margin: 15px 0; }
+        .btn-interes { width: 100%; padding: 15px; background: #25d366; color: white; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <div id="map-wrapper">
+        <img src="https://i.imgur.com/udgsd5U.jpeg" id="plano-img">
+    </div>
+
+    <div id="overlay" onclick="cerrar()"></div>
+    
+    <div id="clientBox" class="client-box">
+        <p style="margin:0; font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase;">Ubicación:</p>
+        <h3 id="c-lote" style="margin: 5px 0 15px 0; color: #1e293b;">--</h3>
+        
+        <p style="margin:0; font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase;">Precio del lote:</p>
+        <div id="c-precio">--</div>
+        
+        <button class="btn-interes" onclick="contactar()">
+            📲 CONSULTAR POR WHATSAPP
+        </button>
+        <p style="font-size: 11px; color: #94a3b8; margin-top: 15px;">Toque en el mapa para cerrar</p>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzeuLZZ9IHuiGWtqjJ05gUdcact9nk1wn33TDHP6A-X20QtEViQaZng7wzWK-whttjU0w/exec";
+        let loteSel = null;
+
+        // FUNCIÓN DE FORMATO DE PRECIO
+        function formatearMoneda(valor) {
+            if (!valor || valor === "" || valor === "---") return "Consultar";
+            let num = parseFloat(valor.toString().replace(/[^0-9.-]+/g,""));
+            if (isNaN(num)) return valor;
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+        }
+
+        async function cargar() {
+            try {
+                const resp = await fetch(`${SCRIPT_URL}?action=getLotesMapa`);
+                const lotes = await resp.json();
+                const container = document.getElementById('map-wrapper');
+                
+                lotes.forEach(l => {
+                    const marker = document.createElement('div');
+                    const [t, left] = l.coords.split(',');
+                    let est = l.estado.toUpperCase();
+                    let clase = (est === "VENDIDO") ? "vendido" : (est === "RESERVA" ? "reserva" : "disponible");
+                    
+                    marker.className = `lote-marker ${clase}`;
+                    marker.style.top = t.trim() + "%"; marker.style.left = left.trim() + "%";
+                    marker.innerText = l.lote;
+                    
+                    marker.onclick = () => {
+                        loteSel = l;
+                        document.getElementById('c-lote').innerText = `Polígono ${l.poligono}, Lote ${l.lote}`;
+                        document.getElementById('c-precio').innerText = (est === "VENDIDO") ? "---" : formatearMoneda(l.precio);
+                        document.getElementById('clientBox').style.display = 'block';
+                        document.getElementById('overlay').style.display = 'block';
+                    };
+                    container.appendChild(marker);
+                });
+            } catch (e) { console.error("Error al cargar datos"); }
+        }
+
+        function contactar() {
+            const msj = `Hola, solicito información sobre el *Polígono ${loteSel.poligono}, Lote %23${loteSel.lote}* que vi en el mapa.`;
+            // Cambia el número de abajo por el tuyo para que el cliente te escriba a ti
+            window.open(`https://api.whatsapp.com/send?phone=50370000000&text=${msj}`);
+        }
+
+        function cerrar() { 
+            document.getElementById('clientBox').style.display = 'none'; 
+            document.getElementById('overlay').style.display = 'none'; 
+        }
+
+        window.onload = cargar;
+    </script>
+</body>
+</html>
