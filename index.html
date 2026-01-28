@@ -99,9 +99,11 @@
         }
 
         function contactar() {
+            // El mensaje ahora usa %23 para representar el símbolo # y que no se corte
             const msj = `Hola, solicito información sobre el *Polígono ${loteSel.poligono}, Lote %23${loteSel.lote}* que vi en el mapa.`;
-            // Cambia el número de abajo por el tuyo para que el cliente te escriba a ti
-            window.open(`https://api.whatsapp.com/send?phone=50370000000&text=${msj}`);
+            
+            // SE QUITÓ EL NÚMERO FIJO (phone=...) PARA QUE EL USUARIO ELIJA EL CONTACTO
+            window.open(`https://api.whatsapp.com/send?text=${msj}`, '_blank');
         }
 
         function cerrar() { 
